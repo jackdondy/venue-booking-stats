@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "预约时长统计",
+  "version": "1.0.0",
+  "description": "自动采集预约记录页面的表格数据，按场馆合并统计预约时长。",
+  "permissions": ["storage"],
+  "host_permissions": ["https://cgyy.buaa.edu.cn/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://cgyy.buaa.edu.cn/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "预约时长统计"
+  }
+}

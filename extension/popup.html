@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>预约时长统计</title>
+<style>
+*{box-sizing:border-box}
+body{width:780px;margin:0;padding:16px 18px 22px;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:#f5f7fa;color:#1f2d3d;font-size:13px}
+/* 在独立标签页中打开时铺满窗口，可随窗口自由缩放 */
+body.wide{width:100%;padding:24px 28px 32px}
+body.wide .chart{height:320px}
+body.wide .stack{max-width:80px}
+body.wide #full{display:none}
+body.wide .card{min-width:150px}
+h1{font-size:16px;margin:0 0 6px}
+h2{font-size:13px;margin:0 0 12px;color:#2c3e50}
+.sub{color:#8492a6;font-size:12px;margin-bottom:12px;line-height:1.6}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+button.act{padding:7px 14px;border:1px solid #d6dce5;background:#fff;border-radius:6px;cursor:pointer;font-size:12px;color:#5a6b7f;font-family:inherit}
+button.act:hover{border-color:#a9b6c7;color:#2c3e50}
+button.act.primary{background:#2d6cdf;border-color:#2d6cdf;color:#fff}
+button.act.primary:hover{background:#2358bb}
+button.act:disabled{opacity:.4;cursor:not-allowed}
+button.act:disabled:hover{border-color:#d6dce5;color:#5a6b7f}
+button.act.primary:disabled:hover{background:#2d6cdf;border-color:#2d6cdf;color:#fff}
+.state{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#5a6b7f}
+.state::before{content:'';width:8px;height:8px;border-radius:50%;background:#2ecc71}
+.state.off::before{background:#c8ccd4}
+.tip{display:none;font-size:12px;padding:8px 12px;border-radius:6px;background:#eef4ff;color:#2d6cdf;margin-bottom:12px}
+.tip.err{background:#fdecea;color:#c0392b}
+.hint{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;line-height:1.6;padding:10px 12px;border-radius:6px;background:#fff8e6;border:1px solid #ffe1a8;color:#8a5a00;margin-bottom:12px}
+.hint b{color:#a15c00}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.card{background:#fff;border-radius:8px;padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.06);min-width:112px;flex:1}
+.card .k{font-size:11px;color:#8492a6}
+.card .v{font-size:18px;font-weight:600;margin-top:2px}
+.panel{background:#fff;border-radius:8px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:14px}
+.scroll{overflow-x:auto}
+.chart{display:flex;align-items:flex-end;gap:10px;height:240px;border-bottom:1px solid #dfe4ea;padding:0 4px;width:max-content;min-width:100%}
+.col{flex:1 0 46px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.stack{display:flex;flex-direction:column-reverse;justify-content:flex-start;width:100%;max-width:52px;height:100%}
+.seg{width:100%;box-shadow:inset 0 -1px 0 rgba(255,255,255,.45)}
+.axis{display:flex;gap:10px;padding:8px 4px 0;width:max-content;min-width:100%}
+.axis .lbl{flex:1 0 46px;text-align:center;font-size:11px;color:#8492a6;white-space:nowrap}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{border-bottom:1px solid #eef1f5;padding:6px 9px;text-align:left}
+th{background:#fafbfc;color:#5a6b7f;font-weight:600;white-space:nowrap}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.zero{color:#c8ccd4}
+.tblwrap{overflow-x:auto;margin-top:16px}
+.picker{display:flex;gap:8px;flex-wrap:wrap}
+.pick{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border:1px solid #d6dce5;background:#fff;border-radius:18px;cursor:pointer;font-size:12px;color:#5a6b7f;font-family:inherit}
+.pick:hover{border-color:#a9b6c7}
+.pick.on{color:#fff;border-color:transparent}
+.pick i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.pick.on i{background:#fff !important}
+.pick .ct{font-size:11px;opacity:.7}
+.acts{display:flex;gap:8px;margin:12px 0 16px}
+.empty{padding:36px 0;text-align:center;color:#a9b6c7}
+.note{font-size:11px;color:#8492a6;margin-top:12px;line-height:1.7}
+</style>
+</head>
+<body>
+<h1>预约时长统计</h1>
+<div class="sub" id="src">正在读取数据…</div>
+
+<div class="toolbar">
+  <button class="act primary" id="start">开始抓取</button>
+  <button class="act" id="pause">暂停抓取</button>
+  <button class="act" id="export">导出 HTML</button>
+  <button class="act" id="clear">清空数据</button>
+  <button class="act" id="full" title="在独立标签页中打开，可随窗口自由缩放">新标签页打开</button>
+  <span class="state" id="state">未开始</span>
+</div>
+<div class="hint" id="hint">
+  <span>请在 <b>cgyy.buaa.edu.cn</b> 的预约记录页登录，然后点「开始抓取」，插件会自动切到 200 条/页并逐页采集。</span>
+  <button class="act" id="open">打开预约记录页</button>
+</div>
+<div class="tip" id="tip"></div>
+
+<div class="panel">
+  <h2>自选场馆合并统计（已支付 + 正常）</h2>
+  <div class="picker" id="picker"></div>
+  <div class="acts"><button class="act" id="all">全选</button><button class="act" id="none">清空选择</button></div>
+  <div class="empty" id="empty">请在上方选择至少一个场馆</div>
+  <div id="result">
+    <div class="cards" id="cards"></div>
+    <div id="chart"></div>
+    <div id="table" class="tblwrap"></div>
+  </div>
+  <div class="note">在预约记录页点「开始抓取」后，插件会自动切到 200 条/页并逐页采集（按记录去重）；需要停止时点「暂停抓取」。点「导出 HTML」可保存为可离线打开的独立统计报告（含场馆多选、直方图与明细表）。柱条悬停可查看各场馆拆分。</div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
